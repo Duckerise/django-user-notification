@@ -127,3 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Manually Added
+pytest.ini
+duckerise/duckerise
+duckerise/manage.py

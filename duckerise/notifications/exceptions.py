@@ -1,6 +1,9 @@
 class NotificationException(Exception):
     pass
 
+class InvalidEventIdentifierFormat(NotificationException):
+    pass
+
 class RelatedUserNotFound(NotificationException):
     pass
 
