@@ -9,16 +9,14 @@ from ..validators import validate_event_identifier
 
 
 @uses_db
-def test_event_identifier_validator():
-    with does_not_raise():
-        validate_event_identifier("auth__user")
-
-@uses_db
-def test_event_identifier_validator2():
-    with pytest.raises(InvalidEventIdentifierFormat):
-        validate_event_identifier("auth_user")
-
-@uses_db
-def test_event_identifier_validator3():
-    with pytest.raises(LookupError):
-        validate_event_identifier("auth__users")
+@pytest.mark.parametrize(
+    'exception,identifier', 
+    [
+        (does_not_raise(), 'auth__user'), 
+        (pytest.raises(InvalidEventIdentifierFormat), 'auth_user'), 
+        (pytest.raises(LookupError), 'auth__users')
+    ]
+)
+def test_event_identifier_validator(exception, identifier):
+    with exception:
+        validate_event_identifier(identifier)
