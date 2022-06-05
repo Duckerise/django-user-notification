@@ -3,13 +3,12 @@ from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from duckerise.notifications.abc import AbstractNotifyEvent
-from duckerise.notifications.validators import validate_event_identifier
 
+from .abc import AbstractNotifyEvent
 from .utils import QuerySetType
+from .validators import validate_event_identifier
 
-# Create your models here.
-UserModel = get_user_model()
+UserModel: models.Model = get_user_model()
 
 class NotificationEvent(AbstractNotifyEvent):
     identifier: str = models.CharField(
