@@ -14,7 +14,7 @@ class AbstractNotifyEvent(models.Model):
     label: str = models.CharField(max_length=100, unique=True)
     mediums: QuerySetType['Medium'] = models.ManyToManyField('notifications.Medium')
     raw_text: str = models.TextField(help_text=_('Raw text, which can be used for sending SMS or similar mediums. Empty text won\'t be sent.'), blank=True, null=True)
-    formatted_text: str = RichTextField(help_text=_('Formatted text, which can be used for sending email or similar mediums. Empty text won\'t be sent.'), blank=True, null=True)
+    rich_text: str = RichTextField(help_text=_('Formatted text, which can be used for sending email or similar mediums. Empty text won\'t be sent.'), blank=True, null=True)
     is_active: bool = models.BooleanField(default=True, verbose_name=_("Notification is active"))
 
     class Meta:
