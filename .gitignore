@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 # Manually Added
+.vscode
 pytest.ini
-duckerise/duckerise
-duckerise/manage.py
+duckerise/**
+!duckerise/notifications

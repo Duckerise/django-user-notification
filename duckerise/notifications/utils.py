@@ -4,7 +4,8 @@ import pytest
 from django.db.models import Model, QuerySet
 
 ##### QuerySet as type for type hinting #####
-_T = TypeVar('_T', bound=Model)
+_T = TypeVar("_T", bound=Model)
+
 
 class QuerySetType(Generic[_T], QuerySet):
     def __iter__(self) -> Iterable[_T]:
@@ -12,6 +13,7 @@ class QuerySetType(Generic[_T], QuerySet):
 
     def first(self) -> Optional[_T]:
         pass
+
 
 ##### Pytest #####
 uses_db = pytest.mark.django_db
