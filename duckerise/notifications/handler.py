@@ -1,3 +1,4 @@
+import re
 import sys
 from typing import Optional
 
@@ -19,10 +20,10 @@ UserModel: Model = get_user_model()
 
 
 class NotificationHandler:
-    pass
+    def __new__(cls) -> "NotificationHandler":
+        # Handle single and bulk request handler
+        return super().__new__()
 
-
-class NotificationSender:
     def __init__(self, ref_obj: Model, identifier: str) -> None:
         self.ref_obj = ref_obj
         self.identifier = identifier
@@ -39,7 +40,20 @@ class NotificationSender:
 
     def replace_variables(self, text: str) -> str:
         replaced_text = text
-        regex = r"(?<={{)(w+)(?=}})"
+
+        # Match {{     ANY_TEXT }}
+        pattern = re.compile(r"({{\s*)(\w+)(\s*}})")
+
+        matches = pattern.finditer(replaced_text)
+
+        for match in matches:
+            replaced_str = "".join(match.groups())
+            field_name = match.group(2)
+
+            replaced_text = replaced_text.replace(
+                replaced_str,
+                getattr(self.ref_obj, field_name, ""),
+            )
 
         return replaced_text
 
@@ -62,3 +76,12 @@ class NotificationSender:
             text = self.replace_variables(raw_text)
             sender_function = self.get_sender_function()
             sender_function(self.get_user(), text)
+
+
+class NotificationSender:
+    def send(self, user, text):
+        pass
+
+    def bulk_send(self, users, texts):
+        for user, text in zip(users, texts):
+            self.send(user, text)
