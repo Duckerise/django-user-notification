@@ -3,7 +3,6 @@ import sys
 from functools import cached_property
 from typing import Callable, Dict, TypeVar
 
-from django.contrib.auth import get_user_model
 from django.db.models import Model
 
 from .exceptions import (
@@ -12,14 +11,13 @@ from .exceptions import (
     RelatedUserNotFound,
 )
 from .models import Medium, NotificationEvent
+from .utils import UserModel
 
 if sys.version_info >= (3, 3):
     from collections.abc import Iterable
 else:
     from collections import Iterable
 
-
-UserModel: Model = get_user_model()
 
 SenderType = TypeVar("SenderType", bound="NotificationSender")
 

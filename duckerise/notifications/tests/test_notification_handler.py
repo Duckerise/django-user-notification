@@ -1,6 +1,30 @@
+import pytest
+
+from ..exceptions import RelatedUserNotFound
 from ..handler import NotificationHandler, NotificationSender
+from ..tests.helpers import NonRefObjClass, RefObjClass
 from ..utils import uses_db
-from .factories import UserFactory
+from .factories import NotificationEventFactory, UserFactory
+
+
+@uses_db
+def test_getting_user_from_ref_obj():
+    user = UserFactory()
+    sender1 = NotificationHandler(user, None)
+    sender2 = NotificationHandler(RefObjClass(user), None)
+    sender3 = NotificationHandler(NonRefObjClass(), None)
+
+    assert sender1.user == user
+    assert sender2.user == user
+
+    with pytest.raises(RelatedUserNotFound):
+        sender3.user
+
+
+@uses_db
+def test_getting_notification():
+    notification_event = NotificationEventFactory()
+    notification_event.label
 
 
 @uses_db

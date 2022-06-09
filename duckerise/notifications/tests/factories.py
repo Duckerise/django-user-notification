@@ -1,10 +1,11 @@
 import factory
-from django.contrib.auth import get_user_model
 from factory.django import DjangoModelFactory
 from faker import Faker
 from pytest_factoryboy import register
 
-UserModel = get_user_model()
+from ..models import Medium, NotificationEvent
+from ..utils import UserModel
+
 faker = Faker()
 
 
@@ -16,3 +17,19 @@ class UserFactory(DjangoModelFactory):
     first_name = factory.LazyAttribute(lambda x: faker.name())
     username = factory.LazyAttribute(lambda x: faker.user_name())
     email = factory.LazyAttribute(lambda x: faker.email())
+
+
+@register
+class MediumFactory(DjangoModelFactory):
+    class Meta:
+        model = Medium
+
+    label = factory.LazyAttribute(lambda x: faker.user_name())
+
+
+@register
+class NotificationEventFactory(DjangoModelFactory):
+    class Meta:
+        model = NotificationEvent
+
+    label = factory.LazyAttribute(lambda x: faker.user_name())
