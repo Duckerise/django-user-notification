@@ -1,18 +1,18 @@
 import pytest
 
-from ..exceptions import RelatedUserNotFound
-from ..handler import NotificationHandler, NotificationSender
+from ..exceptions import RelatedEventNotFound, RelatedUserNotFound
+from ..handler import NotificationSender
 from ..tests.helpers import NonRefObjClass, RefObjClass
 from ..utils import uses_db
-from .factories import NotificationEventFactory, UserFactory
+from .factories import NotificationEventFactory, NotificationHandlerFactory, UserFactory
 
 
 @uses_db
 def test_getting_user_from_ref_obj():
     user = UserFactory()
-    sender1 = NotificationHandler(user, None)
-    sender2 = NotificationHandler(RefObjClass(user), None)
-    sender3 = NotificationHandler(NonRefObjClass(), None)
+    sender1 = NotificationHandlerFactory(ref_obj=user)
+    sender2 = NotificationHandlerFactory(ref_obj=RefObjClass(user))
+    sender3 = NotificationHandlerFactory(ref_obj=NonRefObjClass())
 
     assert sender1.user == user
     assert sender2.user == user
@@ -23,14 +23,18 @@ def test_getting_user_from_ref_obj():
 
 @uses_db
 def test_getting_notification():
-    notification_event = NotificationEventFactory()
-    notification_event.label
+    identifier = "auth__user"
+    notification_event = NotificationEventFactory(identifier=identifier)
+
+    assert NotificationHandlerFactory(identifier=identifier).event == notification_event
+
+    with pytest.raises(RelatedEventNotFound):
+        assert NotificationHandlerFactory(identifier="random_identifier").event
 
 
 @uses_db
 def test_notification_handler_init():
     user = UserFactory()
-    sender = NotificationHandler(user, None)
     text = (
         "My nickname is {{ username }}. "
         "My email is {{email}}. "
@@ -41,8 +45,9 @@ def test_notification_handler_init():
         f"My email is {user.email}. "
         f"And my name is {user.first_name}"
     )
-    print(correct_text)
-    assert sender.replace_variables(text) == correct_text
+    assert (
+        NotificationHandlerFactory(ref_obj=user).replace_variables(text) == correct_text
+    )
 
 
 def test_getting_list_of_sender_subclassses():
@@ -57,4 +62,4 @@ def test_getting_list_of_sender_subclassses():
         EmailSender.__name__: EmailSender,
     }
 
-    assert NotificationHandler(None, None).all_senders == subclasses_dict
+    assert NotificationHandlerFactory().all_senders == subclasses_dict
