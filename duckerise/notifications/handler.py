@@ -76,7 +76,7 @@ class NotificationHandler:
     def all_senders(self) -> Dict[str, SenderType]:
         return {klass.__name__: klass for klass in NotificationSender.__subclasses__()}
 
-    def get_sender(self, medium: Medium):
+    def get_sender(self, medium: Medium) -> SenderType:
         class_name = f"{medium.slug}Sender"
         klass = self.all_senders.get(class_name)
 
@@ -90,6 +90,9 @@ class NotificationHandler:
                 )
             )
 
+        # return instance of sender class
+        return klass()
+
     def get_sender_function(self, medium: Medium) -> Callable:
         func = getattr(self.get_sender(medium), "send", None)
 
@@ -102,8 +105,7 @@ class NotificationHandler:
         return func
 
     def send(self) -> None:
-
-        for medium in self.event.mediums:
+        for medium in self.event.mediums.all():
             raw_text = self.event.get_text_for_medium(medium)
             text = self.replace_variables(raw_text)
             sender_function = self.get_sender_function(medium)

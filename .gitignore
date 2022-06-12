@@ -129,8 +129,7 @@ dmypy.json
 .pyre/
 
 # Manually Added
-.vscode
+.vscode/
 pytest.ini
-*/
-manage.py
+/*
 !duckerise/
