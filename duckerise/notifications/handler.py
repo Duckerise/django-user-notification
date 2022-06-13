@@ -1,14 +1,17 @@
 import re
 import sys
-from typing import Optional
+from functools import cached_property
+from typing import Callable, Dict, TypeVar
 
-from django.contrib.auth import get_user_model
 from django.db.models import Model
 
-from notifications.utils import QuerySetType
-
-from .exceptions import RelatedEventNotFound
-from .models import NotificationEvent
+from .exceptions import (
+    RelatedEventNotFound,
+    RelatedSenderClassNotFound,
+    RelatedUserNotFound,
+)
+from .models import Medium, NotificationEvent
+from .utils import UserModel
 
 if sys.version_info >= (3, 3):
     from collections.abc import Iterable
@@ -16,34 +19,46 @@ else:
     from collections import Iterable
 
 
-UserModel: Model = get_user_model()
+SenderType = TypeVar("SenderType", bound="NotificationSender")
 
 
 class NotificationHandler:
-    def __new__(cls) -> "NotificationHandler":
-        # Handle single and bulk request handler
-        return super().__new__()
-
     def __init__(self, ref_obj: Model, identifier: str) -> None:
         self.ref_obj = ref_obj
         self.identifier = identifier
 
-    def get_user(self) -> UserModel:
-        pass
+    @cached_property
+    def user(self) -> UserModel:
+        if isinstance(self.ref_obj, UserModel):
+            return self.ref_obj
 
-    def get_notification(self) -> Optional[NotificationEvent]:
-        return (
+        user = getattr(self.ref_obj, "user", None)
+
+        if not user:
+            raise RelatedUserNotFound("Reference object has not `user` attribute. ")
+
+        return user
+
+    @cached_property
+    def event(self) -> NotificationEvent:
+        notification = (
             NotificationEvent.objects.filter(identifier=self.identifier)
             .prefetch_related("mediums")
             .first()
         )
 
+        if not notification:
+            raise RelatedEventNotFound(
+                "No event found for identifier {}".format(self.identifier)
+            )
+
+        return notification
+
     def replace_variables(self, text: str) -> str:
         replaced_text = text
 
-        # Match {{     ANY_TEXT }}
+        # Match `{{     ANY_TEXT }}`
         pattern = re.compile(r"({{\s*)(\w+)(\s*}})")
-
         matches = pattern.finditer(replaced_text)
 
         for match in matches:
@@ -57,30 +72,49 @@ class NotificationHandler:
 
         return replaced_text
 
-    def get_sender(self):
-        pass
+    @cached_property
+    def all_senders(self) -> Dict[str, SenderType]:
+        return {klass.__name__: klass for klass in NotificationSender.__subclasses__()}
 
-    def get_sender_function(self):
-        pass
+    def get_sender(self, medium: Medium) -> SenderType:
+        class_name = f"{medium.slug}Sender"
+        klass = self.all_senders.get(class_name)
 
-    def send(self) -> None:
-        notification = self.get_notification()
-
-        if not notification:
-            raise RelatedEventNotFound(
-                "No event found with identifier %s".format(self.identifier)
+        if not klass:
+            raise RelatedSenderClassNotFound(
+                "Class for sending notification via {} not found. "
+                "Class name should be {}, and it should be a"
+                "subclass of NotificationSender class".format(
+                    medium.label,
+                    class_name,
+                )
             )
 
-        for medium in notification.mediums:
-            raw_text = notification.get_text_for_medium(medium)
+        # return instance of sender class
+        return klass()
+
+    def get_sender_function(self, medium: Medium) -> Callable:
+        func = getattr(self.get_sender(medium), "send", None)
+
+        if not func:
+            raise Exception
+
+        if not callable(func):
+            raise Exception
+
+        return func
+
+    def send(self) -> None:
+        for medium in self.event.mediums.all():
+            raw_text = self.event.get_text_for_medium(medium)
             text = self.replace_variables(raw_text)
-            sender_function = self.get_sender_function()
-            sender_function(self.get_user(), text)
+            sender_function = self.get_sender_function(medium)
+            sender_function(self.user, text)
 
 
 class NotificationSender:
     def send(self, user, text):
-        pass
+        raise NotImplementedError
 
     def bulk_send(self, users, texts):
         for user, text in zip(users, texts):

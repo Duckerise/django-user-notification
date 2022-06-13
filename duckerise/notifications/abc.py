@@ -12,7 +12,9 @@ if TYPE_CHECKING:
 
 class AbstractNotifyEvent(models.Model):
     label: str = models.CharField(max_length=100, unique=True)
-    mediums: QuerySetType["Medium"] = models.ManyToManyField("notifications.Medium")
+    mediums: QuerySetType["Medium"] = models.ManyToManyField(
+        "duckerise_notifications.Medium"
+    )
     raw_text: str = models.TextField(
         help_text=_(
             "Raw text, which can be used for sending SMS or similar mediums. Empty text won't be sent."

@@ -14,6 +14,10 @@ class RelatedEventNotFound(NotificationException):
     pass
 
 
+class RelatedSenderClassNotFound(NotificationException):
+    pass
+
+
 class MultipleNotificationsFound(NotificationException):
     pass
 
