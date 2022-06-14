@@ -1,1 +1,1 @@
-# django-user-notification
+# ducker-notifications
