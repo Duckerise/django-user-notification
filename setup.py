@@ -1,13 +1,18 @@
-from setuptools import setup
+from setuptools import find_packages, setup
+
+VERSION = "0.1"
 
 setup(
     name="ducker-notifications",
-    version="0.0.1",
+    version=VERSION,
+    description="Django library for managing and sending notifications to users over different mediums.",
+    url="https://github.com/Duckerise/ducker-notifications",
+    author="Duckerise Team",
+    author_email="duckerise@gmail.com",
+    license="MIT",
+    packages=find_packages(),
     python_requires=">=3.8",
-    authors="Huseyn Abduallabayli, Konul Mammadova, Miradil Zeynalli",
-    long_description="Django library for managing and sending notifications to users over different mediums.",
     install_requires=[
         "django-ckeditor==6.4.2",
     ],
-    tests_requires=["pytest-django==4.5.2"],
 )

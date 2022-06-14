@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class AbstractNotifyEvent(models.Model):
     label: str = models.CharField(max_length=100, unique=True)
     mediums: QuerySetType["Medium"] = models.ManyToManyField(
-        "duckerise_notifications.Medium"
+        "ducker_notifications.Medium"
     )
     raw_text: str = models.TextField(
         help_text=_(
