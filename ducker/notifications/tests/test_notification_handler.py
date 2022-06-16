@@ -2,7 +2,11 @@ from unittest import mock
 
 import pytest
 
-from ..exceptions import RelatedEventNotFound, RelatedUserNotFound
+from ..exceptions import (
+    RelatedEventNotFound,
+    RelatedSenderClassNotFound,
+    RelatedUserNotFound,
+)
 from ..handler import NotificationSender
 from ..tests.helpers import NonRefObjClass, RefObjClass
 from ..utils import uses_db
@@ -57,37 +61,56 @@ def test_notification_handler_init():
     )
 
 
+# So that, inner classes do not affect further tests
+# we reduce test unit scope
+@pytest.fixture(scope="function")
 def test_getting_list_of_sender_subclassses():
     class SMSSender(NotificationSender):
-        pass
+        SLUG = "sms"
 
     class EmailSender(NotificationSender):
-        pass
+        SLUG = "email"
 
     subclasses_dict = {
-        SMSSender.__name__: SMSSender,
-        EmailSender.__name__: EmailSender,
+        SMSSender.SLUG: SMSSender,
+        EmailSender.SLUG: EmailSender,
     }
 
     assert NotificationHandlerFactory().all_senders == subclasses_dict
 
 
 @uses_db
-def test_getting_sender():
+@pytest.fixture(scope="function")
+def test_getting_sender_with_slug():
     class SMSSender(NotificationSender):
-        pass
+        SLUG = "sms"
 
     class EmailSender(NotificationSender):
-        pass
+        SLUG = "email"
 
-    medium = MediumFactory(slug="Email")
+    medium = MediumFactory(slug="email")
 
     assert isinstance(NotificationHandlerFactory().get_sender(medium), EmailSender)
 
 
 @uses_db
+@pytest.fixture(scope="function")
+def test_getting_sender_without_slug():
+    class SMSSender(NotificationSender):
+        pass
+
+    medium = MediumFactory(slug="sms")
+
+    with pytest.raises(RelatedSenderClassNotFound):
+        NotificationHandlerFactory().get_sender(medium)
+
+
+@uses_db
+@pytest.fixture(scope="function")
 def test_getting_sender_function():
     class SMSSender(NotificationSender):
+        SLUG = "SMS"
+
         def send(self):
             pass
 
@@ -99,18 +122,23 @@ def test_getting_sender_function():
 
 
 @uses_db
+@pytest.fixture(scope="function")
 def test_whole_logic():
     class SMSSender(NotificationSender):
+        SLUG = "sms"
+
         def send(self, *args, **kwargs):
             pass
 
     class EmailSender(NotificationSender):
+        SLUG = "email"
+
         def send(self, *args, **kwargs):
             pass
 
     user = UserFactory()
     identifier = "auth__user"
-    mediums = [MediumFactory(slug="SMS"), MediumFactory(slug="Email")]
+    mediums = [MediumFactory(slug="sms"), MediumFactory(slug="email")]
     notification_event = NotificationEventFactory(
         identifier=identifier,
         mediums=mediums,

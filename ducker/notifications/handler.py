@@ -1,3 +1,4 @@
+import logging
 import re
 import sys
 from functools import cached_property
@@ -9,9 +10,10 @@ from .exceptions import (
     RelatedEventNotFound,
     RelatedSenderClassNotFound,
     RelatedUserNotFound,
+    SenderSlugNotFoundException,
 )
 from .models import Medium, NotificationEvent
-from .utils import UserModel
+from .utils import UserModel, is_installed
 
 if sys.version_info >= (3, 3):
     from collections.abc import Iterable
@@ -72,21 +74,24 @@ class NotificationHandler:
 
         return replaced_text
 
+    def generate_text_for_medium(self, medium: Medium):
+        raw_text = self.event.get_text_for_medium(medium)
+        return self.replace_variables(raw_text)
+
     @cached_property
     def all_senders(self) -> Dict[str, SenderType]:
-        return {klass.__name__: klass for klass in NotificationSender.__subclasses__()}
+        return {klass.SLUG: klass for klass in NotificationSender.__subclasses__()}
 
     def get_sender(self, medium: Medium) -> SenderType:
-        class_name = f"{medium.slug}Sender"
-        klass = self.all_senders.get(class_name)
+        klass = self.all_senders.get(medium.slug)
 
         if not klass:
             raise RelatedSenderClassNotFound(
                 "Class for sending notification via {} not found. "
-                "Class name should be {}, and it should be a"
-                "subclass of NotificationSender class".format(
+                "Class should have class attribute SLUG of {}, and it "
+                "should be a subclass of NotificationSender class".format(
                     medium.label,
-                    class_name,
+                    medium.slug,
                 )
             )
 
@@ -104,15 +109,24 @@ class NotificationHandler:
 
         return func
 
+    def handle_followup_events(self):
+        pass
+
     def send(self) -> None:
         for medium in self.event.mediums.all():
-            raw_text = self.event.get_text_for_medium(medium)
-            text = self.replace_variables(raw_text)
+            text = self.generate_text_for_medium(medium)
             sender_function = self.get_sender_function(medium)
             sender_function(self.user, text)
+            self.handle_followup_events()
 
 
 class NotificationSender:
+    SLUG = None
+
+    def __init__(self) -> None:
+        if not self.SLUG:
+            raise SenderSlugNotFoundException("Class did not define SLUG!")
+
     def send(self, user, text):
         raise NotImplementedError
 

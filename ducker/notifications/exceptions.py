@@ -18,6 +18,10 @@ class RelatedSenderClassNotFound(NotificationException):
     pass
 
 
+class SenderSlugNotFoundException(NotificationException):
+    pass
+
+
 class MultipleNotificationsFound(NotificationException):
     pass
 
