@@ -3,7 +3,7 @@ import pytest
 from ..handler import NotificationSender
 
 
-class NonInheretedClass:
+class NotNotificationSenderClass:
     pass
 
 
@@ -18,7 +18,7 @@ def no_slug_sms_sender_class():
         pass
 
     yield SMSSender
-    SMSSender.__bases__ = (NonInheretedClass,)
+    SMSSender.__bases__ = (NotNotificationSenderClass,)
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def sms_sender_class():
             pass
 
     yield SMSSender
-    SMSSender.__bases__ = (NonInheretedClass,)
+    SMSSender.__bases__ = (NotNotificationSenderClass,)
 
 
 @pytest.fixture
@@ -42,4 +42,4 @@ def email_sender_class():
             pass
 
     yield EmailSender
-    EmailSender.__bases__ = (NonInheretedClass,)
+    EmailSender.__bases__ = (NotNotificationSenderClass,)
