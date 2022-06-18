@@ -131,6 +131,6 @@ dmypy.json
 # Manually Added
 .vscode/
 pytest.ini
-/**
+/*
 !ducker/
 !requirements.txt
