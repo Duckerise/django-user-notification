@@ -7,12 +7,14 @@ from typing import Callable, Dict, TypeVar
 from django.db.models import Model
 
 from .exceptions import (
+    CeleryNotEnabled,
+    NotificationException,
     RelatedEventNotFound,
     RelatedSenderClassNotFound,
     RelatedUserNotFound,
     SenderSlugNotFoundException,
 )
-from .models import Medium, NotificationEvent
+from .models import FollowUpEvent, Medium, NotificationEvent
 from .utils import UserModel, is_installed
 
 if sys.version_info >= (3, 3):
@@ -22,6 +24,11 @@ else:
 
 
 SenderType = TypeVar("SenderType", bound="NotificationSender")
+CELERY_ENABLED = is_installed("celery")
+
+
+if CELERY_ENABLED:
+    from celery import group
 
 
 class NotificationHandler:
@@ -43,16 +50,10 @@ class NotificationHandler:
 
     @cached_property
     def event(self) -> NotificationEvent:
-        notification = (
-            NotificationEvent.objects.filter(identifier=self.identifier)
-            .prefetch_related("mediums")
-            .first()
-        )
+        notification = NotificationEvent.objects.filter(identifier=self.identifier).prefetch_related("mediums").first()
 
         if not notification:
-            raise RelatedEventNotFound(
-                "No event found for identifier {}".format(self.identifier)
-            )
+            raise RelatedEventNotFound("No event found for identifier {}".format(self.identifier))
 
         return notification
 
@@ -99,24 +100,41 @@ class NotificationHandler:
         return klass()
 
     def get_sender_function(self, medium: Medium) -> Callable:
-        func = getattr(self.get_sender(medium), "send", None)
+        klass = self.get_sender(medium)
+        func = getattr(klass, "send", None)
 
         if not func:
-            raise Exception
+            raise NotificationException("{} has no function `send`!".format(klass))
 
         if not callable(func):
-            raise Exception
+            raise NotificationException("`send` attribute of {} class is not callable!".format(klass))
 
         return func
 
+    def _send(self, medium: Medium, text: str):
+        sender_function = self.get_sender_function(medium)
+
+        if self.event.delay_seconds:
+            if not CELERY_ENABLED:
+                logging.warning("Celery is not enabled, will run tasks in foreground")
+            else:
+                pass
+
+        sender_function(self.user, text)
+
     def handle_followup_events(self):
-        pass
+        if not CELERY_ENABLED:
+            raise CeleryNotEnabled
+
+        followup_events = FollowUpEvent.objects.filter(after_event=self.event, event__is_enabled=True)
+
+        for f_event in followup_events:
+            pass
 
     def send(self) -> None:
         for medium in self.event.mediums.all():
             text = self.generate_text_for_medium(medium)
-            sender_function = self.get_sender_function(medium)
-            sender_function(self.user, text)
+            self._send(medium, text)
             self.handle_followup_events()
 
 

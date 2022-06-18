@@ -22,6 +22,9 @@ class SenderSlugNotFoundException(NotificationException):
     pass
 
 
+class CeleryNotEnabled(NotificationException):
+    pass
+
 class MultipleNotificationsFound(NotificationException):
     pass
 
